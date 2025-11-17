@@ -221,15 +221,13 @@ def print_grid(grid: np.ndarray) -> None:
 
 def solve_sudoku_from_text(
     text_path: str,
-    output_path: str,
     verbose: bool = False
 ) -> bool:
     """
-    Solve a Sudoku puzzle from a text file.
+    Solve a Sudoku puzzle from a text file and display the result.
 
     Args:
         text_path: Path to input text file
-        output_path: Path to save result text file
         verbose: Show verbose output
 
     Returns:
@@ -278,7 +276,7 @@ def solve_sudoku_from_text(
     print("✓ Puzzle solved successfully!")
 
     # Step 3: Validate solution
-    print("\n[2.5/3] Validating solution...")
+    print("\n[3/3] Validating solution...")
     is_valid, errors = SudokuValidator.validate_solution(solution, verbose=False)
 
     if is_valid:
@@ -295,29 +293,20 @@ def solve_sudoku_from_text(
     if comparison['overwrite_count'] > 0:
         print(f"⚠️  Warning: {comparison['overwrite_count']} original values were changed!")
 
-    # Step 4: Write solution to file
-    print("\n[3/3] Writing solution to file...")
+    # Display formatted output
+    print("\n" + "=" * 50)
+    print("SUDOKU SOLUTION")
+    print("=" * 50)
+    print(f"\nValidation: {'✅ VALID' if is_valid else '⚠️  INVALID'}")
+    print(f"Cells filled by solver: {comparison['cells_filled_by_solver']}")
 
-    # Write in text format with original marked
-    write_sudoku_text(solution, output_path, original=puzzle)
-    print(f"✓ Solution saved to {output_path}")
-
-    # Also write a formatted version
-    formatted_path = output_path.replace('.txt', '_formatted.txt')
-    with open(formatted_path, 'w') as f:
-        f.write("SUDOKU SOLUTION\n")
-        f.write("=" * 50 + "\n\n")
-        f.write("Original puzzle:\n")
-        f.write(format_sudoku_text(puzzle) + "\n\n")
-        f.write("Solution:\n")
-        f.write(format_sudoku_text(solution, original=puzzle) + "\n\n")
-        f.write(f"Validation: {'✅ VALID' if is_valid else '⚠️  INVALID'}\n")
-        f.write(f"Cells filled by solver: {comparison['cells_filled_by_solver']}\n")
-
-    print(f"✓ Formatted solution saved to {formatted_path}")
+    if verbose:
+        print("\n" + "-" * 50)
+        print("Solution with original digits marked:")
+        print(format_sudoku_text(solution, original=puzzle))
 
     print("\n" + "=" * 50)
-    print("Success! Sudoku solved and saved.")
+    print("Success! Sudoku solved.")
     return True
 
 
@@ -422,14 +411,9 @@ Text file format:
         # Text file mode
         print("Text file mode detected")
 
-        # Set default output to .txt if not specified
-        if args.output == "solved_sudoku.png":
-            args.output = "solved_sudoku.txt"
-
-        # Run text solver
+        # Run text solver (output only to shell, no files created)
         success = solve_sudoku_from_text(
             text_path=args.input,
-            output_path=args.output,
             verbose=args.verbose
         )
     else:
