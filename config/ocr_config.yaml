@@ -1,0 +1,44 @@
+# OCR Ensemble Configuration
+
+# Voting strategy: majority, weighted, or confidence
+voting_strategy: weighted
+
+# Model configurations
+models:
+  # CNN model trained on MNIST
+  cnn:
+    enabled: true
+    weight: 1.5
+    level: 1  # Fast path
+    model_path: models/digit_cnn.h5
+
+  # Tesseract OCR with multiple PSM modes
+  tesseract:
+    enabled: true
+    weight: 1.0
+    level: 1  # Fast path
+    psm_modes: [10, 8, 7, 13]  # Try these modes in order
+
+  # EasyOCR (deep learning OCR)
+  easyocr:
+    enabled: true
+    weight: 2.0
+    level: 2  # Medium path (slower but more accurate)
+    gpu: false  # Set to true if GPU available
+    languages: ['en']
+
+# Confidence thresholds for each level
+thresholds:
+  # If Level 1 result has confidence >= this, accept it
+  level1_confidence: 0.75
+
+  # If Level 2 result has confidence >= this, accept it
+  level2_confidence: 0.65
+
+  # Minimum confidence to consider a result valid
+  min_confidence: 0.5
+
+  # Thresholds for confidence aggregation strategy
+  all_agree: 0.5      # All models agree
+  majority_agree: 0.7  # 2+ models agree
+  single_model: 0.9    # Only one model confident
