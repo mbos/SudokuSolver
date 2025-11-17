@@ -185,11 +185,3 @@ sudoka_solver/
 └── testplaatje.png          # Sample puzzle image
 ```
 
-## Future Improvements
-
-- Support for handwritten Sudoku puzzles
-- Web interface
-- Mobile app
-- Support for other grid sizes (4x4, 16x16)
-- Real-time solving from video stream
-- Multiple solution detection
