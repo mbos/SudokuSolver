@@ -1,0 +1,54 @@
+{
+  "total_samples": 486,
+  "samples_by_digit": {
+    "1": 54,
+    "2": 54,
+    "3": 54,
+    "4": 54,
+    "5": 54,
+    "6": 54,
+    "7": 54,
+    "8": 54,
+    "9": 54
+  },
+  "sources": [
+    {
+      "timestamp": "20251117_200002",
+      "source_image": "/Users/mikebos/projecten/sudoka_solver/testplaatje.png",
+      "samples_collected": 81,
+      "date": "2025-11-17T20:00:02.718342"
+    },
+    {
+      "timestamp": "20251117_200401",
+      "source_image": "/Users/mikebos/projecten/sudoka_solver/testplaatje.png",
+      "samples_collected": 81,
+      "date": "2025-11-17T20:04:01.009991"
+    },
+    {
+      "timestamp": "20251117_200529",
+      "source_image": "/tmp/test_spaties.png",
+      "samples_collected": 81,
+      "date": "2025-11-17T20:05:29.615731"
+    },
+    {
+      "timestamp": "20251117_200607",
+      "source_image": "/tmp/Schermafbeelding 2025-11-17.png",
+      "samples_collected": 81,
+      "date": "2025-11-17T20:06:07.365971"
+    },
+    {
+      "timestamp": "20251117_205345",
+      "source_image": "testplaatje.png",
+      "samples_collected": 81,
+      "date": "2025-11-17T20:53:45.336122"
+    },
+    {
+      "timestamp": "20251117_210906",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-17 om 21.02.16.png",
+      "samples_collected": 81,
+      "date": "2025-11-17T21:09:06.746602"
+    }
+  ],
+  "created": "2025-11-17T20:00:02.708982",
+  "last_updated": "2025-11-17T21:09:06.746614"
+}

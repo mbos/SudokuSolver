@@ -1,0 +1,4 @@
+bij input van een tekst file niet automatisch bestanden bewaren
+automatisch doorschakelen naar tesseract model als er fouten in de ocr optreden, daarbij de uitkomsten van beide modellen combineren.
+Derde OCR model?
+Fix de tekst output in de shell, tabel aligned niet en heeft een laatste lege kolom
