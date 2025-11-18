@@ -66,6 +66,8 @@ class OCRErrorCorrector:
         """
         Identify cells most likely to contain OCR errors based on violations and confidence.
 
+        For duplicate violations, only add the cell with LOWER confidence (more suspicious).
+
         Args:
             grid: 9x9 puzzle grid
             confidence_matrix: 9x9 confidence scores
@@ -76,10 +78,32 @@ class OCRErrorCorrector:
         """
         suspect_cells = set()
 
-        # Collect all cells involved in violations
+        # Collect cells involved in violations, prioritizing low confidence
         for violation_type, index, duplicate_values, cell_positions in violations:
+            # For each duplicate value, only mark the cell(s) with lowest confidence as suspect
+            # Group cells by their value
+            cells_by_value = {}
             for row, col in cell_positions:
-                suspect_cells.add((row, col, confidence_matrix[row, col]))
+                val = grid[row, col]
+                if val not in cells_by_value:
+                    cells_by_value[val] = []
+                cells_by_value[val].append((row, col, confidence_matrix[row, col]))
+
+            # For each value that appears multiple times, mark the lower-confidence ones as suspect
+            for val, cells in cells_by_value.items():
+                if len(cells) > 1:
+                    # Sort by confidence (lowest first)
+                    cells_sorted = sorted(cells, key=lambda x: x[2])
+                    # Add only the lowest confidence cell(s) - keep the highest confidence one
+                    # If confidences are similar, add all but the highest
+                    highest_conf = cells_sorted[-1][2]
+                    for row, col, conf in cells_sorted[:-1]:
+                        # Only add if significantly lower confidence OR if similar confidence
+                        if conf < highest_conf or (highest_conf - conf) < 0.1:
+                            suspect_cells.add((row, col, conf))
+                    # If all confidences are very similar, also add the "highest" as it might be wrong too
+                    if len(cells_sorted) > 1 and (cells_sorted[-1][2] - cells_sorted[0][2]) < 0.15:
+                        suspect_cells.add((cells_sorted[-1][0], cells_sorted[-1][1], cells_sorted[-1][2]))
 
         # Sort by confidence (lowest first - most suspicious)
         return sorted(suspect_cells, key=lambda x: x[2])
@@ -247,7 +271,8 @@ class OCRErrorCorrector:
         current_grid = grid.copy()
         all_corrections = []
         iterations = 0
-        max_iterations = 5
+        max_iterations = 10  # Increased from 5
+        failed_attempts = set()  # Track cells that didn't lead to improvement
 
         while iterations < max_iterations:
             iterations += 1
@@ -279,55 +304,64 @@ class OCRErrorCorrector:
             # Identify suspect cells for this iteration
             suspect_cells = self.identify_suspect_cells(current_grid, confidence_matrix, violations)
 
+            # Filter out cells we've already failed to correct
+            suspect_cells = [(r, c, conf) for r, c, conf in suspect_cells if (r, c) not in failed_attempts]
+
             if not suspect_cells:
                 if verbose:
-                    print("No suspect cells identified")
+                    print("No more suspect cells to try (all previously attempted)")
                 break
 
-            # Try to correct the most suspicious cell
-            row, col, confidence = suspect_cells[0]
-            old_value = current_grid[row, col]
-
-            alternatives = self.suggest_alternatives(old_value, confidence)
-
-            if has_content is not None and has_content[row, col]:
-                alternatives = [a for a in alternatives if a != 0]
-            elif old_value == 0:
-                alternatives = list(range(1, 10))
-
-            if verbose:
-                print(f"\nAttempting to correct ({row},{col}): value={old_value}, conf={confidence:.2f}")
-
-            # Try each alternative
+            # Try to correct suspect cells in order of confidence
             correction_made = False
-            for new_value in alternatives:
-                test_grid = current_grid.copy()
-                test_grid[row, col] = new_value
+            for row, col, confidence in suspect_cells:
+                old_value = current_grid[row, col]
 
-                solver = SudokuSolver()
-                solver.load_puzzle(test_grid)
+                alternatives = self.suggest_alternatives(old_value, confidence)
 
-                # Check if this improves the situation (valid or reduces violations)
-                test_violations = solver.find_constraint_violations()
+                if has_content is not None and has_content[row, col]:
+                    alternatives = [a for a in alternatives if a != 0]
+                elif old_value == 0:
+                    alternatives = list(range(1, 10))
 
-                if len(test_violations) < len(violations):
-                    # Improvement! Use this correction
-                    if verbose:
-                        print(f"  Corrected ({row},{col}): {old_value} → {new_value} (reduced violations)")
-                    current_grid = test_grid
-                    all_corrections.append((row, col, old_value, new_value))
-                    correction_made = True
+                if verbose:
+                    print(f"\nAttempting to correct ({row},{col}): value={old_value}, conf={confidence:.2f}")
+                    print(f"  Alternatives: {alternatives}")
+
+                # Try each alternative
+                for new_value in alternatives:
+                    test_grid = current_grid.copy()
+                    test_grid[row, col] = new_value
+
+                    solver = SudokuSolver()
+                    solver.load_puzzle(test_grid)
+
+                    # Check if this improves the situation (valid or reduces violations)
+                    test_violations = solver.find_constraint_violations()
+
+                    if len(test_violations) < len(violations):
+                        # Improvement! Use this correction
+                        if verbose:
+                            print(f"  ✓ Corrected ({row},{col}): {old_value} → {new_value} (reduced violations)")
+                        current_grid = test_grid
+                        all_corrections.append((row, col, old_value, new_value))
+                        correction_made = True
+                        # Clear failed attempts since grid changed
+                        failed_attempts.clear()
+                        break
+
+                if correction_made:
                     break
+
+                # This cell didn't help, mark it as failed
+                failed_attempts.add((row, col))
+                if verbose:
+                    print(f"  No improvement from correcting ({row},{col})")
 
             if not correction_made:
                 if verbose:
-                    print(f"  Could not improve cell ({row},{col})")
-                # Try next suspect cell
-                if len(suspect_cells) > 1:
-                    # Move to next iteration to re-evaluate
-                    continue
-                else:
-                    break
+                    print(f"\nNo corrections made in this iteration")
+                break
 
         # Final check
         solver = SudokuSolver()
