@@ -115,7 +115,8 @@ def solve_sudoku_from_image(
             detected_grid,
             confidence_matrix,
             has_content,
-            verbose=verbose or debug
+            verbose=verbose or debug,
+            low_confidence_threshold=0.8  # Check cells with confidence < 0.8
         )
 
         if success:

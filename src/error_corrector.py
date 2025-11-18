@@ -252,18 +252,21 @@ class OCRErrorCorrector:
         grid: np.ndarray,
         confidence_matrix: np.ndarray,
         has_content: Optional[np.ndarray] = None,
-        verbose: bool = False
+        verbose: bool = False,
+        low_confidence_threshold: float = 0.7
     ) -> Tuple[bool, np.ndarray, List[Tuple[int, int, int, int]]]:
         """
         Attempt to correct multiple OCR errors using iterative refinement.
 
         This method tries to correct errors one by one, rechecking violations after each correction.
+        After resolving constraint violations, also checks low-confidence cells even if puzzle is valid.
 
         Args:
             grid: 9x9 puzzle grid with suspected OCR errors
             confidence_matrix: 9x9 confidence scores
             has_content: Optional 9x9 boolean array indicating cells with visual content
             verbose: If True, print correction attempts
+            low_confidence_threshold: Confidence threshold for checking cells (default: 0.7)
 
         Returns:
             Tuple of (success, corrected_grid, corrections_made)
@@ -286,12 +289,15 @@ class OCRErrorCorrector:
             solver = SudokuSolver()
             solver.load_puzzle(current_grid)
 
-            # If valid and solvable, we're done
+            # If valid and solvable, check low-confidence cells before returning
             if solver.is_valid_puzzle() and solver.solve():
                 if verbose:
-                    print(f"\n✓ Puzzle successfully corrected after {iterations} iteration(s)")
-                    print(f"  Total corrections: {len(all_corrections)}")
-                return True, solver.get_solution(), all_corrections
+                    print(f"\n✓ Puzzle valid and solvable after {iterations} iteration(s)")
+                    print(f"  Corrections so far: {len(all_corrections)}")
+
+                # Break out of constraint violation loop, proceed to Phase 2
+                baseline_solution = solver.get_solution()
+                break
 
             # Find violations
             violations = solver.find_constraint_violations()
@@ -363,7 +369,102 @@ class OCRErrorCorrector:
                     print(f"\nNo corrections made in this iteration")
                 break
 
-        # Final check
+        # Phase 2: Check low-confidence cells even if puzzle seems valid
+        # Get baseline solution first (may already be set from while loop break)
+        if 'baseline_solution' not in locals():
+            solver = SudokuSolver()
+            solver.load_puzzle(current_grid)
+            if solver.is_valid_puzzle() and solver.solve():
+                baseline_solution = solver.get_solution()
+            else:
+                # If still not solvable, return failure
+                return False, current_grid, all_corrections
+
+        if verbose:
+            print(f"\n{'='*70}")
+            print("Phase 2: Checking low-confidence cells")
+            print(f"{'='*70}")
+
+        # Find all cells with low confidence OR easily confused digits (excluding already corrected cells)
+        low_conf_cells = []
+        corrected_positions = {(r, c) for r, c, _, _ in all_corrections}
+
+        # Highly confusable digit pairs that should always be checked
+        high_confusion_digits = {6, 8, 9}  # These are often confused with each other
+
+        for row in range(9):
+            for col in range(9):
+                if (row, col) not in corrected_positions and current_grid[row, col] != 0:
+                    val = current_grid[row, col]
+                    conf = confidence_matrix[row, col]
+
+                    # Include if: low confidence OR high-confusion digit with medium-low confidence
+                    if conf < low_confidence_threshold or (val in high_confusion_digits and conf < 0.9):
+                        low_conf_cells.append((row, col, conf))
+
+        # Sort by confidence (lowest first)
+        low_conf_cells.sort(key=lambda x: x[2])
+
+        if verbose:
+            if low_conf_cells:
+                print(f"\nFound {len(low_conf_cells)} low-confidence cells (threshold < {low_confidence_threshold}):")
+                for row, col, conf in low_conf_cells[:10]:  # Show first 10
+                    print(f"  ({row},{col}): value={current_grid[row,col]}, confidence={conf:.2f}")
+            else:
+                print(f"\nNo low-confidence cells found (all above threshold {low_confidence_threshold})")
+
+        # Try correcting low-confidence cells
+        # Strategy: If a low-confidence cell has an alternative from confusion matrix
+        # that ALSO gives a valid solution, prefer that alternative
+        for row, col, confidence in low_conf_cells:
+            old_value = current_grid[row, col]
+
+            # Get alternatives from confusion matrix (visual similarity)
+            alternatives = self.suggest_alternatives(old_value, confidence)
+
+            if has_content is not None and has_content[row, col]:
+                alternatives = [a for a in alternatives if a != 0]
+
+            if not alternatives:
+                continue
+
+            if verbose:
+                print(f"\nChecking low-confidence cell ({row},{col}): value={old_value}, conf={confidence:.2f}, alternatives={alternatives}")
+
+            # Try each alternative
+            found_better = False
+            for new_value in alternatives:
+                if new_value == old_value:
+                    continue
+
+                test_grid = current_grid.copy()
+                test_grid[row, col] = new_value
+
+                solver = SudokuSolver()
+                solver.load_puzzle(test_grid)
+
+                if solver.is_valid_puzzle() and solver.solve():
+                    # Alternative also gives valid solution!
+                    # Since confidence is low AND alternative is from confusion matrix,
+                    # the alternative is likely more correct
+                    if verbose:
+                        print(f"  ✓ Alternative {new_value} also gives valid solution (confusion: {old_value}↔{new_value})")
+                        print(f"    Given low confidence ({confidence:.2f}), preferring alternative")
+
+                    # Use alternative
+                    current_grid = test_grid
+                    baseline_solution = solver.get_solution()
+                    all_corrections.append((row, col, old_value, new_value))
+                    found_better = True
+                    break
+                else:
+                    if verbose:
+                        print(f"  ✗ Alternative {new_value} does not give valid solution")
+
+            if found_better and verbose:
+                print(f"  → Corrected ({row},{col}): {old_value} → {all_corrections[-1][3]}")
+
+        # Final check with corrections
         solver = SudokuSolver()
         solver.load_puzzle(current_grid)
         if solver.is_valid_puzzle() and solver.solve():
