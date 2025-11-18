@@ -118,7 +118,7 @@ class EnsembleRecognizer:
 
         print(f"[Ensemble] Initialized with {len(self.recognizers)} recognizer(s)")
 
-    def recognize_digit(self, cell: np.ndarray, verbose: bool = False) -> int:
+    def recognize_digit(self, cell: np.ndarray, verbose: bool = False) -> Tuple[int, float]:
         """
         Recognize digit using ensemble with fallback levels.
 
@@ -127,19 +127,19 @@ class EnsembleRecognizer:
             verbose: Print debug information
 
         Returns:
-            Recognized digit (0-9), where 0 means empty
+            Tuple of (recognized digit (0-9), confidence score 0-1), where 0 means empty
         """
         self.stats['total_cells'] += 1
 
         # Preprocess once for all recognizers
         if not self.recognizers:
-            return 0
+            return 0, 0.0
 
         preprocessed, is_empty = self.recognizers[0].preprocess_cell(cell)
 
         if is_empty:
             self.stats['empty_cells'] += 1
-            return 0
+            return 0, 1.0  # High confidence for empty cells
 
         # Level 1: Fast path (CNN + basic Tesseract)
         level1_results = self._run_level1(cell, preprocessed)
@@ -150,7 +150,7 @@ class EnsembleRecognizer:
             self.stats['level1_success'] += 1
             if verbose:
                 print(f"  [L1] Digit: {result.digit}, Confidence: {result.confidence:.2f}")
-            return result.digit
+            return result.digit, result.confidence
 
         # Level 2: Medium path (add EasyOCR)
         level2_results = self._run_level2(cell, preprocessed, level1_results)
@@ -161,7 +161,7 @@ class EnsembleRecognizer:
             self.stats['level2_success'] += 1
             if verbose:
                 print(f"  [L2] Digit: {result.digit}, Confidence: {result.confidence:.2f}")
-            return result.digit
+            return result.digit, result.confidence
 
         # Level 3: Full ensemble
         level3_results = self._run_level3(cell, preprocessed, level2_results)
@@ -171,7 +171,7 @@ class EnsembleRecognizer:
         if verbose:
             print(f"  [L3] Digit: {result.digit}, Confidence: {result.confidence:.2f}")
 
-        return result.digit
+        return result.digit, result.confidence
 
     def _run_level1(self, cell: np.ndarray, preprocessed: np.ndarray) -> List[RecognitionResult]:
         """Run Level 1 recognizers (fast path)."""
@@ -203,7 +203,7 @@ class EnsembleRecognizer:
         # In future, could add more advanced models here
         return existing_results
 
-    def recognize_grid(self, cells: list, verbose: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+    def recognize_grid(self, cells: list, verbose: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Recognize all digits in a grid of cells.
 
@@ -213,10 +213,12 @@ class EnsembleRecognizer:
 
         Returns:
             Tuple of (9x9 grid with recognized digits,
-                     9x9 boolean array indicating which cells have visual content)
+                     9x9 boolean array indicating which cells have visual content,
+                     9x9 float array with confidence scores for each cell)
         """
         grid = np.zeros((9, 9), dtype=int)
         has_content = np.zeros((9, 9), dtype=bool)
+        confidence_matrix = np.zeros((9, 9), dtype=float)
 
         print(f"\n[Ensemble] Recognizing grid with {len(self.recognizers)} model(s)...")
 
@@ -232,8 +234,9 @@ class EnsembleRecognizer:
                 has_content[row, col] = False
 
             # Recognize digit
-            digit = self.recognize_digit(cell, verbose=verbose)
+            digit, confidence = self.recognize_digit(cell, verbose=verbose)
             grid[row, col] = digit
+            confidence_matrix[row, col] = confidence
 
             # Progress indicator
             if (i + 1) % 9 == 0 and not verbose:
@@ -241,7 +244,7 @@ class EnsembleRecognizer:
 
         self._print_stats()
 
-        return grid, has_content
+        return grid, has_content, confidence_matrix
 
     def _print_stats(self):
         """Print recognition statistics."""

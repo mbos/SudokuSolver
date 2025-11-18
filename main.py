@@ -20,6 +20,7 @@ from src.image_generator import SolutionDrawer
 from src.validator import SudokuValidator, print_validation_report
 from src.training_data_collector import TrainingDataCollector, print_collection_summary
 from src.text_parser import parse_sudoku_text, write_sudoku_text, format_sudoku_text
+from src.error_corrector import OCRErrorCorrector
 
 
 def solve_sudoku_from_image(
@@ -69,10 +70,10 @@ def solve_sudoku_from_image(
     if use_ensemble:
         print("Using ensemble of multiple OCR models...")
         ensemble = EnsembleRecognizer(voting_strategy="weighted")
-        detected_grid, has_content = ensemble.recognize_grid(cells, verbose=verbose)
+        detected_grid, has_content, confidence_matrix = ensemble.recognize_grid(cells, verbose=verbose)
     else:
         recognizer = DigitRecognizer(model_path=model_path, use_tesseract=use_tesseract)
-        detected_grid, has_content = recognizer.recognize_grid(cells)
+        detected_grid, has_content, confidence_matrix = recognizer.recognize_grid(cells)
 
     # Display detected grid
     print("\nDetected puzzle:")
@@ -97,31 +98,49 @@ def solve_sudoku_from_image(
     solver = SudokuSolver()
     solver.load_puzzle(detected_grid)
 
-    if not solver.is_valid_puzzle():
-        print("Error: Detected puzzle is invalid (contains duplicates)")
-        # Show validation details
-        is_valid, errors = SudokuValidator.validate_puzzle(detected_grid, verbose=False)
-        if not is_valid:
-            print(f"\nValidation found {len(errors)} error(s):")
-            for error in errors[:5]:  # Show first 5 errors
-                print(f"  - {error}")
-            if len(errors) > 5:
-                print(f"  ... and {len(errors) - 5} more errors")
-            print("\nThis is likely due to OCR errors. Try using --tesseract or --debug")
-        return False
+    # Try to solve directly first
+    if solver.is_valid_puzzle() and solver.solve():
+        solution = solver.get_solution()
+        corrections_made = []
+        print("\nSolved puzzle:")
+        print_grid(solution)
+        print("✓ Puzzle solved successfully!")
+    else:
+        # Puzzle is invalid or unsolvable - try error correction
+        print("⚠️  Puzzle is invalid or unsolvable (likely due to OCR errors)")
+        print("\n[3.5/4] Attempting OCR error correction...")
 
-    if not solver.solve():
-        print("Error: Could not solve the puzzle")
-        print("This might be due to OCR errors. Try using --tesseract or --debug")
-        return False
+        corrector = OCRErrorCorrector(max_corrections=10, max_attempts=100)
+        success, corrected_solution, corrections_made = corrector.correct_multiple_errors(
+            detected_grid,
+            confidence_matrix,
+            has_content,
+            verbose=verbose or debug,
+            low_confidence_threshold=0.8  # Check cells with confidence < 0.8
+        )
 
-    solution = solver.get_solution()
-    print("\nSolved puzzle:")
-    print_grid(solution)
-    print("✓ Puzzle solved successfully!")
+        if success:
+            solution = corrected_solution
+            print(f"\n✅ Puzzle successfully corrected and solved!")
+            print(f"   Made {len(corrections_made)} correction(s):")
+            for row, col, old_val, new_val in corrections_made:
+                conf = confidence_matrix[row, col]
+                print(f"   - Cell ({row},{col}): {old_val} → {new_val} (confidence was {conf:.2f})")
+
+            print("\nCorrected and solved puzzle:")
+            print_grid(solution)
+        else:
+            print("\n❌ Error correction failed - could not find valid solution")
+            if corrections_made:
+                print(f"   Attempted {len(corrections_made)} correction(s) but puzzle still unsolvable")
+            print("\nTips:")
+            print("  - Try with --debug to inspect OCR preprocessing")
+            print("  - Check that the image has good quality and lighting")
+            print("  - Ensure all digits are clearly visible")
+            return False
 
     # Validate solution
-    print("\n[3.5/4] Validating solution...")
+    print("\n[3.6/4] Validating solution...")
     is_valid, errors = SudokuValidator.validate_solution(solution, verbose=False)
 
     if is_valid:

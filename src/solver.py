@@ -283,3 +283,88 @@ class SudokuSolver:
                     return False
 
         return True
+
+    def find_constraint_violations(self) -> List[Tuple[str, int, List[int], List[Tuple[int, int]]]]:
+        """
+        Find all constraint violations in the puzzle.
+
+        Returns:
+            List of violations, each as (violation_type, index, duplicate_values, cell_positions)
+            - violation_type: "row", "column", or "box"
+            - index: row/column number (0-8) or box number (0-8)
+            - duplicate_values: list of values that appear multiple times
+            - cell_positions: list of (row, col) tuples for cells involved in violations
+        """
+        violations = []
+
+        # Check rows for duplicates
+        for row in range(9):
+            cells_with_values = [(row, col, self.grid[row, col])
+                                for col in range(9) if self.grid[row, col] != 0]
+
+            value_counts = {}
+            for r, c, val in cells_with_values:
+                if val not in value_counts:
+                    value_counts[val] = []
+                value_counts[val].append((r, c))
+
+            duplicates = {val: positions for val, positions in value_counts.items()
+                         if len(positions) > 1}
+
+            if duplicates:
+                duplicate_values = list(duplicates.keys())
+                cell_positions = []
+                for positions in duplicates.values():
+                    cell_positions.extend(positions)
+                violations.append(("row", row, duplicate_values, cell_positions))
+
+        # Check columns for duplicates
+        for col in range(9):
+            cells_with_values = [(row, col, self.grid[row, col])
+                                for row in range(9) if self.grid[row, col] != 0]
+
+            value_counts = {}
+            for r, c, val in cells_with_values:
+                if val not in value_counts:
+                    value_counts[val] = []
+                value_counts[val].append((r, c))
+
+            duplicates = {val: positions for val, positions in value_counts.items()
+                         if len(positions) > 1}
+
+            if duplicates:
+                duplicate_values = list(duplicates.keys())
+                cell_positions = []
+                for positions in duplicates.values():
+                    cell_positions.extend(positions)
+                violations.append(("column", col, duplicate_values, cell_positions))
+
+        # Check boxes for duplicates
+        for box_idx in range(9):
+            box_row = 3 * (box_idx // 3)
+            box_col = 3 * (box_idx % 3)
+
+            cells_with_values = [
+                (r, c, self.grid[r, c])
+                for r in range(box_row, box_row + 3)
+                for c in range(box_col, box_col + 3)
+                if self.grid[r, c] != 0
+            ]
+
+            value_counts = {}
+            for r, c, val in cells_with_values:
+                if val not in value_counts:
+                    value_counts[val] = []
+                value_counts[val].append((r, c))
+
+            duplicates = {val: positions for val, positions in value_counts.items()
+                         if len(positions) > 1}
+
+            if duplicates:
+                duplicate_values = list(duplicates.keys())
+                cell_positions = []
+                for positions in duplicates.values():
+                    cell_positions.extend(positions)
+                violations.append(("box", box_idx, duplicate_values, cell_positions))
+
+        return violations
