@@ -164,7 +164,7 @@ class DigitRecognizer:
 
         return canvas
 
-    def recognize_with_cnn(self, cell_image: np.ndarray) -> int:
+    def recognize_with_cnn(self, cell_image: np.ndarray) -> Tuple[int, float]:
         """
         Recognize digit using CNN model.
 
@@ -172,10 +172,10 @@ class DigitRecognizer:
             cell_image: Preprocessed cell image
 
         Returns:
-            Recognized digit (1-9) or 0 if empty/uncertain
+            Tuple of (recognized digit (1-9) or 0 if empty/uncertain, confidence score)
         """
         if self.model is None:
-            return 0
+            return 0, 0.0
 
         # Resize to 28x28 preserving aspect ratio (MNIST-style)
         resized = self.resize_to_mnist_format(cell_image)
@@ -189,7 +189,7 @@ class DigitRecognizer:
         # Predict
         predictions = self.model.predict(input_data, verbose=0)
         digit = np.argmax(predictions[0])
-        confidence = predictions[0][digit]
+        confidence = float(predictions[0][digit])
 
         # TIER 1: Adaptive confidence thresholds per digit
         # Some digits (6, 8, 9) are harder to distinguish
@@ -205,11 +205,11 @@ class DigitRecognizer:
 
         # Only return if confident enough
         if confidence > threshold:
-            return int(digit) if digit != 0 else 0
+            return (int(digit) if digit != 0 else 0), confidence
         else:
-            return 0
+            return 0, confidence
 
-    def recognize_with_tesseract(self, cell_image: np.ndarray) -> int:
+    def recognize_with_tesseract(self, cell_image: np.ndarray) -> Tuple[int, float]:
         """
         Recognize digit using Tesseract OCR with optimized configuration (TIER 1).
 
@@ -217,10 +217,10 @@ class DigitRecognizer:
             cell_image: Preprocessed cell image
 
         Returns:
-            Recognized digit (1-9) or 0 if empty/uncertain
+            Tuple of (recognized digit (1-9) or 0 if empty/uncertain, confidence score 0-1)
         """
         if self.pytesseract is None:
-            return 0
+            return 0, 0.0
 
         # Resize for better OCR (8x upscale for small digits)
         height, width = cell_image.shape
@@ -253,19 +253,35 @@ class DigitRecognizer:
             config = f'--psm {psm} {base_config}'
 
             try:
-                text = self.pytesseract.image_to_string(resized, config=config)
-                text = text.strip()
+                # Get detailed data with confidence
+                data = self.pytesseract.image_to_data(resized, config=config, output_type=self.pytesseract.Output.DICT)
 
-                if text.isdigit() and len(text) == 1:
-                    digit = int(text)
-                    if 1 <= digit <= 9:
-                        return digit
+                # Find the most confident text detection
+                for i, text in enumerate(data['text']):
+                    text = text.strip()
+                    if text.isdigit() and len(text) == 1:
+                        digit = int(text)
+                        if 1 <= digit <= 9:
+                            # Tesseract confidence is 0-100, convert to 0-1
+                            confidence = float(data['conf'][i]) / 100.0 if data['conf'][i] != -1 else 0.5
+                            return digit, confidence
             except Exception:
-                continue  # Try next PSM mode
+                # Fallback to simple string method if data method fails
+                try:
+                    text = self.pytesseract.image_to_string(resized, config=config)
+                    text = text.strip()
 
-        return 0
+                    if text.isdigit() and len(text) == 1:
+                        digit = int(text)
+                        if 1 <= digit <= 9:
+                            # No confidence available, use moderate value
+                            return digit, 0.6
+                except Exception:
+                    continue  # Try next PSM mode
 
-    def recognize_digit(self, cell: np.ndarray) -> int:
+        return 0, 0.0
+
+    def recognize_digit(self, cell: np.ndarray) -> Tuple[int, float]:
         """
         Recognize digit in a cell.
 
@@ -273,28 +289,28 @@ class DigitRecognizer:
             cell: Cell image
 
         Returns:
-            Recognized digit (1-9) or 0 if empty
+            Tuple of (recognized digit (1-9) or 0 if empty, confidence score 0-1)
         """
         # Preprocess
         processed, is_empty = self.preprocess_cell(cell)
 
         if is_empty:
-            return 0
+            return 0, 1.0  # High confidence that cell is empty
 
         # Use appropriate method
         if self.use_tesseract:
             return self.recognize_with_tesseract(processed)
         else:
-            result = self.recognize_with_cnn(processed)
+            digit, confidence = self.recognize_with_cnn(processed)
             # If CNN fails and tesseract is available, try tesseract
-            if result == 0:
+            if digit == 0 and self.pytesseract is not None:
                 try:
                     return self.recognize_with_tesseract(processed)
                 except:
-                    return 0
-            return result
+                    return 0, confidence
+            return digit, confidence
 
-    def recognize_grid(self, cells: list) -> Tuple[np.ndarray, np.ndarray]:
+    def recognize_grid(self, cells: list) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Recognize all digits in a grid of cells.
 
@@ -303,10 +319,12 @@ class DigitRecognizer:
 
         Returns:
             Tuple of (9x9 numpy array with recognized digits,
-                     9x9 boolean array indicating which cells have visual content)
+                     9x9 boolean array indicating which cells have visual content,
+                     9x9 float array with confidence scores for each cell)
         """
         grid = np.zeros((9, 9), dtype=int)
         has_content = np.zeros((9, 9), dtype=bool)
+        confidence_matrix = np.zeros((9, 9), dtype=float)
 
         for i, cell in enumerate(cells):
             row = i // 9
@@ -317,10 +335,11 @@ class DigitRecognizer:
             has_content[row, col] = not is_empty
 
             # Then recognize the digit
-            digit = self.recognize_digit(cell)
+            digit, confidence = self.recognize_digit(cell)
             grid[row, col] = digit
+            confidence_matrix[row, col] = confidence
 
-        return grid, has_content
+        return grid, has_content, confidence_matrix
 
 
 def train_cnn_model(save_path: str = "models/digit_cnn.h5"):
