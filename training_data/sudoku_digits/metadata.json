@@ -1,15 +1,15 @@
 {
-  "total_samples": 486,
+  "total_samples": 1053,
   "samples_by_digit": {
-    "1": 54,
-    "2": 54,
-    "3": 54,
-    "4": 54,
-    "5": 54,
-    "6": 54,
-    "7": 54,
-    "8": 54,
-    "9": 54
+    "1": 117,
+    "2": 117,
+    "3": 117,
+    "4": 117,
+    "5": 117,
+    "6": 117,
+    "7": 117,
+    "8": 117,
+    "9": 117
   },
   "sources": [
     {
@@ -47,8 +47,50 @@
       "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-17 om 21.02.16.png",
       "samples_collected": 81,
       "date": "2025-11-17T21:09:06.746602"
+    },
+    {
+      "timestamp": "20251118_084203",
+      "source_image": "/Users/mikebos/projecten/sudoka_solver/testplaat2.png",
+      "samples_collected": 81,
+      "date": "2025-11-18T08:42:03.766231"
+    },
+    {
+      "timestamp": "20251118_085646",
+      "source_image": "/Users/mikebos/projecten/sudoka_solver/testplaat2.png",
+      "samples_collected": 81,
+      "date": "2025-11-18T08:56:46.902326"
+    },
+    {
+      "timestamp": "20251118_090259",
+      "source_image": "/Users/mikebos/projecten/sudoka_solver/testplaat2.png",
+      "samples_collected": 81,
+      "date": "2025-11-18T09:02:59.042507"
+    },
+    {
+      "timestamp": "20251118_090418",
+      "source_image": "/Users/mikebos/projecten/sudoka_solver/testplaat2.png",
+      "samples_collected": 81,
+      "date": "2025-11-18T09:04:18.494632"
+    },
+    {
+      "timestamp": "20251118_090459",
+      "source_image": "/Users/mikebos/projecten/sudoka_solver/testplaat2.png",
+      "samples_collected": 81,
+      "date": "2025-11-18T09:04:59.560749"
+    },
+    {
+      "timestamp": "20251118_090529",
+      "source_image": "/Users/mikebos/projecten/sudoka_solver/testplaat2.png",
+      "samples_collected": 81,
+      "date": "2025-11-18T09:05:29.031475"
+    },
+    {
+      "timestamp": "20251118_090555",
+      "source_image": "/Users/mikebos/projecten/sudoka_solver/testplaat2.png",
+      "samples_collected": 81,
+      "date": "2025-11-18T09:05:55.209316"
     }
   ],
   "created": "2025-11-17T20:00:02.708982",
-  "last_updated": "2025-11-17T21:09:06.746614"
+  "last_updated": "2025-11-18T09:05:55.209322"
 }

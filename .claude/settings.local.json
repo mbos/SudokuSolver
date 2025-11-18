@@ -12,7 +12,11 @@
       "Bash(python analyze_cnn_errors.py:*)",
       "Bash(python train_improved_cnn.py:*)",
       "Bash(python:*)",
-      "Bash(~/bin/ssolver.sh:*)"
+      "Bash(~/bin/ssolver.sh:*)",
+      "Bash(git commit:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
