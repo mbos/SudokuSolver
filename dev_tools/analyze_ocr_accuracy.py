@@ -51,7 +51,7 @@ print("=" * 80)
 # Find the actual starting grid (non-zero cells in correct solution)
 actual_starting_grid = np.zeros_like(correct_solution)
 print("\nACTUAL STARTING GRID (from correct solution):")
-print("-" * 80)
+print("-" * 40)
 for row in range(9):
     for col in range(9):
         if detected_grid[row, col] != 0:
@@ -59,7 +59,7 @@ for row in range(9):
 
 # Print comparison
 print("Position | Actual | Detected | Status")
-print("-" * 80)
+print("-" * 40)
 
 correct_count = 0
 missed_count = 0
@@ -78,12 +78,12 @@ for row in range(9):
                 status = "✗ WRONG!"
                 incorrect_count += 1
 
-            print(f"({row},{col})    |   {actual}    |    {detected}     | {status}")
+            print(f"({row},{col})    |   {actual}    |    {detected}    | {status}")
 
 # Check for missed digits
 print("\n" + "=" * 80)
 print("CELLS WITH CONTENT NOT RECOGNIZED BY OCR:")
-print("-" * 80)
+print("-" * 40)
 print("These cells have visual content but OCR returned 0:")
 print()
 
@@ -96,7 +96,7 @@ for row, col in missed_cells:
 # Summary
 print("\n" + "=" * 80)
 print("SUMMARY")
-print("-" * 80)
+print("-" * 40)
 print(f"Total cells detected: {np.count_nonzero(detected_grid)}")
 print(f"Correctly detected:   {correct_count}")
 print(f"Incorrectly detected: {incorrect_count}")
@@ -106,7 +106,7 @@ print(f"OCR Accuracy:         {correct_count}/{correct_count + incorrect_count +
 # Check if solver output is correct
 print("\n" + "=" * 80)
 print("SOLVER OUTPUT CORRECTNESS")
-print("-" * 80)
+print("-" * 40)
 if np.array_equal(solver_output, correct_solution):
     print("✓ Solver output matches correct solution!")
 else:
@@ -116,7 +116,7 @@ else:
 
 print("\n" + "=" * 80)
 print("CONCLUSION")
-print("-" * 80)
+print("-" * 40)
 print("""
 The solver algorithm itself works correctly - it produces a valid Sudoku solution.
 However, because OCR missed or misread some starting digits, the solver created
