@@ -158,7 +158,6 @@ class SolutionDrawer:
             output_path: Path to save the image
         """
         cv2.imwrite(output_path, image)
-        print(f"Result saved to {output_path}")
 
     def display_result(self, image: np.ndarray, window_name: str = "Solved Sudoku") -> None:
         """
