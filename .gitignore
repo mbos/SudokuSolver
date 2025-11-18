@@ -1,3 +1,21 @@
 /venv
 __pycache__/
 .DS_Store
+
+# Generated output images
+solved_sudoku.png
+test_*.png
+*_corrected.png
+*_ensemble.png
+*_v*.png
+*_uitkomst.png
+
+# Model files (large, regenerated)
+models/*.h5
+models/*.keras
+
+# Training data (collected automatically)
+training_data/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/

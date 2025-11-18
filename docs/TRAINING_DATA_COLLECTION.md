@@ -94,22 +94,22 @@ Wanneer je genoeg data hebt verzameld (bijv. 200+ samples):
 
 ```bash
 # Fine-tune het CNN model met verzamelde Sudoku digits
-python retrain_with_collected_data.py
+python dev_tools/retrain_with_collected_data.py
 ```
 
 **Opties:**
 ```bash
 # Automatisch vervangen als model verbeterd is (aanbevolen!)
-python retrain_with_collected_data.py --auto-replace
+python dev_tools/retrain_with_collected_data.py --auto-replace
 
 # Meer epochs voor betere training
-python retrain_with_collected_data.py -e 5 --auto-replace
+python dev_tools/retrain_with_collected_data.py -e 5 --auto-replace
 
 # Minimum verbetering vereist (bijv. minimaal 2% beter)
-python retrain_with_collected_data.py --auto-replace --min-improvement 2.0
+python dev_tools/retrain_with_collected_data.py --auto-replace --min-improvement 2.0
 
 # Custom model paths
-python retrain_with_collected_data.py \
+python dev_tools/retrain_with_collected_data.py \
     -m models/digit_cnn.h5 \
     -o models/digit_cnn_improved.h5 \
     -e 3
@@ -237,7 +237,7 @@ python src/training_data_collector.py
 
 ```bash
 # Automatisch vervangen als model beter is (minimaal 1% verbetering)
-python retrain_with_collected_data.py -e 5 --auto-replace --min-improvement 1.0
+python dev_tools/retrain_with_collected_data.py -e 5 --auto-replace --min-improvement 1.0
 ```
 
 **Het script doet automatisch:**
@@ -281,7 +281,8 @@ sudoka_solver/
 ├── src/
 │   └── training_data_collector.py
 │
-└── retrain_with_collected_data.py
+└── dev_tools/
+    └── retrain_with_collected_data.py
 ```
 
 ## Metadata Format
@@ -391,7 +392,7 @@ done
 **Oplossing:**
 ```bash
 # Meer epochs
-python retrain_with_collected_data.py -e 10
+python dev_tools/retrain_with_collected_data.py -e 10
 
 # Verzamel data van diverse bronnen
 ```
@@ -410,7 +411,7 @@ python main.py puzzle3.png -o s3.png
 python src/training_data_collector.py
 
 # 3. Fine-tune en auto-update (als beter dan origineel)
-python retrain_with_collected_data.py --auto-replace --min-improvement 1.0
+python dev_tools/retrain_with_collected_data.py --auto-replace --min-improvement 1.0
 
 # 4. Klaar! Model is automatisch ge-update als het beter was
 python main.py puzzle4.png -o s4.png  # Gebruikt verbeterd model
@@ -429,7 +430,7 @@ done
 python src/training_data_collector.py
 
 # 3. Auto-retrain en replace (minimaal 2% verbetering vereist)
-python retrain_with_collected_data.py \
+python dev_tools/retrain_with_collected_data.py \
     -e 5 \
     --auto-replace \
     --min-improvement 2.0
