@@ -15,7 +15,7 @@ This is a Sudoku solver that processes images of Sudoku puzzles and outputs solv
 pip install -r requirements.txt
 
 # Train the CNN model for digit recognition (one-time setup)
-python src/ocr.py
+python -m src.ocr
 ```
 
 ### Running the Solver
@@ -80,7 +80,7 @@ The codebase follows a modular pipeline architecture with four main components:
     - Returns tuple: `(detected_grid, has_content_mask)`
     - `has_content_mask` indicates which cells have visual content (bool array)
     - This separates "cell has content" from "OCR recognized content"
-- **Training**: Run `python src/ocr.py` to train on MNIST (5 epochs, ~99% accuracy)
+- **Training**: Run `python -m src.ocr` to train on MNIST (5 epochs, ~99% accuracy)
 
 ### 3. Solver (`src/solver.py`)
 - **Purpose**: Solve Sudoku using hybrid algorithm
@@ -157,7 +157,7 @@ Input Image
 - **Grid not detected**: Ensure grid is largest object, good contrast
 - **OCR failures**: Small/faint digits fail with Tesseract, use CNN
 - **Unsolvable puzzle**: Usually due to OCR errors, check debug output
-- **Model not found**: Run `python src/ocr.py` to train CNN first
+- **Model not found**: Run `python -m src.ocr` to train CNN first
 
 ## Dependencies
 
@@ -219,6 +219,56 @@ The verbose flag shows:
 - Which cells have content but weren't recognized
 - Final visualization: `[B]` = black (original), `[R]` = red (solver-added)
 - Warnings when OCR misses digits
+
+## Code Change Protocol
+
+When making code changes, **always check if documentation needs to be updated**. This ensures consistency between code and documentation.
+
+### Documentation Update Checklist
+
+After making code changes, verify if any of the following need updates:
+
+1. **Command-line interfaces changed?**
+   - [ ] Update README.md usage examples
+   - [ ] Update CLAUDE.md "Common Commands" section
+   - [ ] Update `main.py` help text and error messages
+   - [ ] Update any shell scripts that call the changed commands
+
+2. **File structure changed?** (files moved, renamed, or reorganized)
+   - [ ] Update README.md "Project Structure" section
+   - [ ] Update CLAUDE.md "Architecture" section
+   - [ ] Update import statements in all affected files
+   - [ ] Update any documentation references to file paths
+
+3. **API/function signatures changed?**
+   - [ ] Update CLAUDE.md "Key Methods" documentation
+   - [ ] Update inline code comments
+   - [ ] Update any example code in documentation
+
+4. **New dependencies added?**
+   - [ ] Update `requirements.txt`
+   - [ ] Update README.md "Dependencies" section
+   - [ ] Update installation instructions
+
+5. **Algorithm or behavior changed?**
+   - [ ] Update CLAUDE.md architecture descriptions
+   - [ ] Update README.md "Algorithm Details" section
+   - [ ] Update comments explaining the logic
+
+6. **New features or options added?**
+   - [ ] Add to README.md feature list
+   - [ ] Update command-line help text
+   - [ ] Add usage examples
+   - [ ] Update CLAUDE.md with implementation details
+
+**Standard practice**: Always use `grep -r` to search for references to changed elements before considering a change complete.
+
+Example:
+```bash
+# If you renamed src/ocr.py, search for all references:
+grep -r "src/ocr.py" .
+grep -r "python src/ocr" .
+```
 
 ## Note on Repository Name
 

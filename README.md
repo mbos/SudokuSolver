@@ -33,7 +33,7 @@ pip install -r requirements.txt
 
 3. (Optional) Train the CNN model for better accuracy:
 ```bash
-python src/ocr.py
+python -m src.ocr
 ```
 
 This will download the MNIST dataset and train a CNN model, saving it to `models/digit_cnn.h5`.
@@ -212,7 +212,7 @@ Three methods are available:
 
 ### Poor Digit Recognition
 - **Ensemble mode (default) usually provides best accuracy**
-- If using CNN only: Ensure model is trained (`python src/ocr.py`)
+- If using CNN only: Ensure model is trained (`python -m src.ocr`)
 - Try different OCR modes: ensemble (default), `--tesseract`, or `--no-ensemble`
 - Use `--debug` or `--verbose` to see which digits are being misrecognized
 - The system automatically collects training data to improve accuracy over time

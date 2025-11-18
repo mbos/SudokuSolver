@@ -77,7 +77,7 @@ def retrain_model(
     print(f"\n[2/4] Loading existing CNN model from {model_path}...")
     if not os.path.exists(model_path):
         print(f"✗ Model not found at {model_path}")
-        print("Please train the base model first: python src/ocr.py")
+        print("Please train the base model first: python -m src.ocr")
         return False
 
     model = keras.models.load_model(model_path)

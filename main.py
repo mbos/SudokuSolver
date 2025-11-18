@@ -441,7 +441,7 @@ Text file format:
         if not args.tesseract and not os.path.exists(args.model):
             print(f"Warning: CNN model '{args.model}' not found")
             print("Please train the model first by running:")
-            print("  python src/ocr.py")
+            print("  python -m src.ocr")
             print("Or use --tesseract flag to use Tesseract OCR instead")
             return 1
 
