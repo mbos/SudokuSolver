@@ -14,6 +14,7 @@ import numpy as np
 
 from src.grid_detector import GridDetector
 from src.ocr import DigitRecognizer
+from src.ocr.ensemble_recognizer import EnsembleRecognizer
 from src.solver import SudokuSolver
 from src.image_generator import SolutionDrawer
 from src.validator import SudokuValidator, print_validation_report
@@ -26,6 +27,7 @@ def solve_sudoku_from_image(
     output_path: str,
     model_path: str = "models/digit_cnn.h5",
     use_tesseract: bool = False,
+    use_ensemble: bool = True,
     debug: bool = False,
     show_result: bool = False,
     verbose: bool = False,
@@ -39,6 +41,7 @@ def solve_sudoku_from_image(
         output_path: Path to save result image
         model_path: Path to CNN model for OCR
         use_tesseract: Use Tesseract instead of CNN
+        use_ensemble: Use ensemble of multiple OCR models (default: True)
         debug: Show debug information (with image windows)
         show_result: Display result in window
         verbose: Show verbose ASCII output without image windows
@@ -63,8 +66,13 @@ def solve_sudoku_from_image(
 
     # Step 2: Recognize digits using OCR
     print("\n[2/4] Recognizing digits using OCR...")
-    recognizer = DigitRecognizer(model_path=model_path, use_tesseract=use_tesseract)
-    detected_grid, has_content = recognizer.recognize_grid(cells)
+    if use_ensemble:
+        print("Using ensemble of multiple OCR models...")
+        ensemble = EnsembleRecognizer(voting_strategy="weighted")
+        detected_grid, has_content = ensemble.recognize_grid(cells, verbose=verbose)
+    else:
+        recognizer = DigitRecognizer(model_path=model_path, use_tesseract=use_tesseract)
+        detected_grid, has_content = recognizer.recognize_grid(cells)
 
     # Display detected grid
     print("\nDetected puzzle:")
@@ -317,13 +325,16 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Solve from image using CNN model
+  # Solve from image using ensemble OCR (default, best accuracy)
   python main.py testplaatje.png -o solved.png
 
   # Solve from text file
   python main.py sudoku.txt -o solved.txt
 
-  # Use Tesseract OCR for images
+  # Disable ensemble and use only CNN
+  python main.py testplaatje.png -o solved.png --no-ensemble
+
+  # Use Tesseract OCR instead of ensemble
   python main.py testplaatje.png -o solved.png --tesseract
 
   # Enable debug mode to see processing steps
@@ -370,6 +381,14 @@ Text file format:
         "-t", "--tesseract",
         action="store_true",
         help="Use Tesseract OCR instead of CNN"
+    )
+
+    parser.add_argument(
+        "--no-ensemble",
+        action="store_false",
+        dest="ensemble",
+        default=True,
+        help="Disable ensemble mode and use only CNN or Tesseract (ensemble is enabled by default)"
     )
 
     parser.add_argument(
@@ -432,6 +451,7 @@ Text file format:
             output_path=args.output,
             model_path=args.model,
             use_tesseract=args.tesseract,
+            use_ensemble=args.ensemble,
             debug=args.debug,
             show_result=args.show,
             verbose=args.verbose,
