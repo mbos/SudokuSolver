@@ -133,7 +133,7 @@ class TrainingDataCollector:
         print("=" * 60)
         print(f"Total samples collected: {stats['total_samples']}")
         print(f"From {stats['total_sources']} source images")
-        print(f"\nSamples per digit:")
+        print("\nSamples per digit:")
 
         for digit in range(1, 10):
             count = stats['samples_by_digit'][str(digit)]
@@ -165,7 +165,7 @@ class TrainingDataCollector:
             # Extract digit from filename (format: timestamp_idx_digitN.png)
             try:
                 digit = int(filename.split('_digit')[1].split('.')[0])
-            except:
+            except ValueError:
                 continue
 
             # Load and preprocess image
@@ -198,10 +198,10 @@ def print_collection_summary(samples_collected: int, source_image: str):
     """Print summary after collecting training data."""
     if samples_collected > 0:
         print(f"\n📚 Collected {samples_collected} labeled samples from {source_image}")
-        print(f"   Training data saved to: training_data/sudoku_digits/")
-        print(f"   Use 'python src/training_data_collector.py' to view statistics")
+        print("   Training data saved to: training_data/sudoku_digits/")
+        print("   Use 'python src/training_data_collector.py' to view statistics")
     else:
-        print(f"\n📚 No training data collected (puzzle not solved or validation failed)")
+        print("\n📚 No training data collected (puzzle not solved or validation failed)")
 
 
 if __name__ == "__main__":

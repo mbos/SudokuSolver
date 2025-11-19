@@ -307,7 +307,8 @@ class DigitRecognizer:
             if digit == 0 and self.pytesseract is not None:
                 try:
                     return self.recognize_with_tesseract(processed)
-                except:
+                except Exception as e:
+                    print(f"Warning: Tesseract recognition failed: {e}")
                     return 0, confidence
             return digit, confidence
 
@@ -353,7 +354,6 @@ def train_cnn_model(save_path: str = "models/digit_cnn.h5"):
     try:
         from tensorflow import keras
         from tensorflow.keras import layers
-        import tensorflow as tf
     except ImportError:
         print("Error: TensorFlow not installed")
         return

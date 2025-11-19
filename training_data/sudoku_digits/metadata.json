@@ -1,15 +1,15 @@
 {
-  "total_samples": 1863,
+  "total_samples": 2349,
   "samples_by_digit": {
-    "1": 207,
-    "2": 207,
-    "3": 207,
-    "4": 207,
-    "5": 207,
-    "6": 207,
-    "7": 207,
-    "8": 207,
-    "9": 207
+    "1": 261,
+    "2": 261,
+    "3": 261,
+    "4": 261,
+    "5": 261,
+    "6": 261,
+    "7": 261,
+    "8": 261,
+    "9": 261
   },
   "sources": [
     {
@@ -149,8 +149,44 @@
       "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 13.53.11.png",
       "samples_collected": 81,
       "date": "2025-11-19T18:52:07.165825"
+    },
+    {
+      "timestamp": "20251119_215659",
+      "source_image": "/Users/mikebos/Downloads/night.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T21:56:59.489051"
+    },
+    {
+      "timestamp": "20251119_220001",
+      "source_image": "/Users/mikebos/Downloads/night.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T22:00:01.284846"
+    },
+    {
+      "timestamp": "20251119_220735",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 22.06.49.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T22:07:35.202329"
+    },
+    {
+      "timestamp": "20251119_221100",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 22.06.49.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T22:11:00.263145"
+    },
+    {
+      "timestamp": "20251119_221248",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 22.06.49.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T22:12:48.528922"
+    },
+    {
+      "timestamp": "20251119_221401",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 22.06.49.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T22:14:01.162498"
     }
   ],
   "created": "2025-11-17T20:00:02.708982",
-  "last_updated": "2025-11-19T18:52:07.165835"
+  "last_updated": "2025-11-19T22:14:01.162509"
 }

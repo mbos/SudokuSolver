@@ -18,9 +18,9 @@ from src.ocr import DigitRecognizer
 from src.ocr.ensemble_recognizer import EnsembleRecognizer
 from src.solver import SudokuSolver
 from src.image_generator import SolutionDrawer
-from src.validator import SudokuValidator, print_validation_report
-from src.training_data_collector import TrainingDataCollector, print_collection_summary
-from src.text_parser import parse_sudoku_text, write_sudoku_text, format_sudoku_text
+from src.validator import SudokuValidator
+from src.training_data_collector import TrainingDataCollector
+from src.text_parser import parse_sudoku_text
 from src.error_corrector import OCRErrorCorrector
 
 
@@ -33,7 +33,8 @@ def solve_sudoku_from_image(
     debug: bool = False,
     show_result: bool = False,
     verbose: bool = False,
-    collect_training_data: bool = True
+    collect_training_data: bool = True,
+    invert_colors: bool = False
 ) -> bool:
     """
     Complete pipeline to solve Sudoku from an image.
@@ -48,6 +49,7 @@ def solve_sudoku_from_image(
         show_result: Display result in window
         verbose: Show verbose ASCII output without image windows
         collect_training_data: Collect labeled samples for CNN training (default: True)
+        invert_colors: Manually invert image colors for dark themes (default: False)
 
     Returns:
         True if successful, False otherwise
@@ -58,7 +60,7 @@ def solve_sudoku_from_image(
     # Step 1: Detect and extract grid
     print("\n[1/4] Detecting and extracting Sudoku grid...")
     detector = GridDetector(debug=debug)
-    original_image, cells, warped_grid = detector.detect_and_extract(image_path)
+    original_image, cells, warped_grid = detector.detect_and_extract(image_path, invert_colors=invert_colors)
 
     if cells is None:
         print("Error: Could not detect Sudoku grid in image")
@@ -128,7 +130,7 @@ def solve_sudoku_from_image(
             detected_grid,
             confidence_matrix,
             has_content,
-            verbose=verbose or debug,
+            verbose=verbose,
             low_confidence_threshold=0.8  # Check cells with confidence < 0.8
         )
 
@@ -198,10 +200,10 @@ def solve_sudoku_from_image(
     # For simplicity, save the warped solution
     # (Overlaying back to original with perspective would need corner coordinates)
     drawer.save_result(warped_with_solution, output_path)
-    print(f"✓ Solution saved to {output_path}")
+
 
     # Show final visualization
-    if verbose or debug:
+    if verbose:
         print("\n" + "=" * 60)
         print("FINAL OUTPUT VISUALIZATION")
         print("=" * 60)
@@ -251,7 +253,7 @@ def print_grid(grid: np.ndarray) -> None:
         for j, val in enumerate(row):
             if j > 0 and j % 3 == 0:
                 row_str += "│"
-            row_str += f" {val if val != 0 else '.'}"
+            row_str += f"{val if val != 0 else '.':^3}"
 
         row_str += " │"
         print(row_str)
@@ -447,6 +449,12 @@ Text file format:
         help="Don't collect training data from successfully solved puzzles"
     )
 
+    parser.add_argument(
+        "--invert-colors",
+        action="store_true",
+        help="Manually invert colors of the input image (for dark themes)"
+    )
+
     args = parser.parse_args()
 
     # Check if input file exists
@@ -487,7 +495,8 @@ Text file format:
             debug=args.debug,
             show_result=args.show,
             verbose=args.verbose,
-            collect_training_data=not args.no_collect
+            collect_training_data=not args.no_collect,
+            invert_colors=args.invert_colors
         )
 
     return 0 if success else 1

@@ -13,7 +13,6 @@ try alternative digits that look similar (e.g., 6/8/9, 1/7) and check if they:
 
 import numpy as np
 from typing import Optional, List, Tuple, Dict
-import cv2
 
 
 # Visual similarity matrix: for each digit, list similar-looking digits in order of similarity
@@ -250,7 +249,7 @@ class SimilarDigitFallbackRecognizer:
 
                 predictions = self.base.model.predict(input_data, verbose=0)
                 return float(predictions[0][target_digit])
-            except Exception as e:
+            except Exception:
                 # Fallback to heuristics
                 pass
 
@@ -403,7 +402,7 @@ class SimilarDigitFallbackRecognizer:
 
     def _print_stats(self):
         """Print statistics about fallback performance."""
-        print(f"\n[Fallback Stats]")
+        print("\n[Fallback Stats]")
         print(f"  Total fallback attempts: {self.stats['total_fallbacks']}")
         print(f"  Successful corrections: {self.stats['successful_corrections']}")
         print(f"  Constraint violations fixed: {self.stats['constraint_violations_fixed']}")

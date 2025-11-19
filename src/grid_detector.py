@@ -17,30 +17,46 @@ class GridDetector:
         """
         self.debug = debug
 
-    def preprocess_image(self, image: np.ndarray) -> np.ndarray:
+    def _should_invert(self, image: np.ndarray, force_invert: bool) -> bool:
         """
-        Preprocess image for grid detection.
-        Handles both normal (light background) and inverted/dark theme images.
+        Determines if the image should be color-inverted.
 
         Args:
             image: Input BGR image
+            force_invert: True if manual inversion is requested
+
+        Returns:
+            True if the image should be inverted.
+        """
+        if force_invert:
+            if self.debug:
+                print("Manual color inversion forced.")
+            return True
+
+        # Convert to grayscale to check brightness
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        mean_brightness = np.mean(gray)
+
+        # If image is predominantly dark (mean < 128), it's likely a dark theme
+        if mean_brightness < 128:
+            if self.debug:
+                print(f"Dark theme detected (brightness: {mean_brightness:.1f}), inverting image...")
+            return True
+
+        return False
+
+    def preprocess_image(self, image: np.ndarray) -> np.ndarray:
+        """
+        Preprocess image for grid detection.
+
+        Args:
+            image: Input BGR image (assumed to have a light background)
 
         Returns:
             Binary image suitable for contour detection
         """
         # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        # Detect if image has dark background (inverted/night theme)
-        # Calculate mean brightness of the image
-        mean_brightness = np.mean(gray)
-
-        # If image is predominantly dark (mean < 128), it's likely inverted
-        # Invert it so we have standard light background
-        if mean_brightness < 128:
-            if self.debug:
-                print(f"Dark theme detected (brightness: {mean_brightness:.1f}), inverting image...")
-            gray = cv2.bitwise_not(gray)
 
         # Apply Gaussian blur to reduce noise
         blurred = cv2.GaussianBlur(gray, (7, 7), 3)
@@ -97,7 +113,7 @@ class GridDetector:
         Detect grid in synthetic/clean images where grid lines are thin.
 
         Args:
-            image: Input BGR image
+            image: Input BGR image (assumed to have a light background)
 
         Returns:
             4 corner points or None if not found
@@ -242,13 +258,14 @@ class GridDetector:
         return cells
 
     def detect_and_extract(
-        self, image_path: str
+        self, image_path: str, invert_colors: bool = False
     ) -> Tuple[Optional[np.ndarray], Optional[List[np.ndarray]], Optional[np.ndarray]]:
         """
         Full pipeline: detect grid, extract, and return cells.
 
         Args:
             image_path: Path to input image
+            invert_colors: Manually force color inversion for dark themes
 
         Returns:
             Tuple of (original_image, list of 81 cells, warped_grid) or
@@ -262,6 +279,13 @@ class GridDetector:
 
         # Store original for later
         original = image.copy()
+
+        # Decide whether to invert colors (for dark themes)
+        if self._should_invert(image, force_invert=invert_colors):
+            image = cv2.bitwise_not(image)
+            if self.debug:
+                cv2.imshow("Inverted Color Image", image)
+                cv2.waitKey(0)
 
         # Try synthetic grid detection first (for clean images)
         grid_contour = self.detect_synthetic_grid(image)
@@ -280,14 +304,15 @@ class GridDetector:
 
         if self.debug:
             debug_img = original.copy()
+            # Draw contour on the original to show what was detected
             cv2.drawContours(debug_img, [grid_contour], -1, (0, 255, 0), 3)
             cv2.imshow("Grid Detected", debug_img)
             cv2.waitKey(0)
 
-        # Apply perspective transform
+        # Apply perspective transform using the potentially inverted image
         warped = self.apply_perspective_transform(image, grid_contour)
 
-        # Extract individual cells
+        # Extract individual cells from the warped image
         cells = self.extract_cells(warped)
 
         return original, cells, warped

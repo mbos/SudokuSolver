@@ -1,9 +1,8 @@
 """OCR error correction module for Sudoku puzzles."""
 
 import numpy as np
-from typing import List, Tuple, Set, Optional, Dict
+from typing import List, Tuple, Optional
 from .solver import SudokuSolver
-import copy
 
 
 class OCRErrorCorrector:
@@ -366,7 +365,7 @@ class OCRErrorCorrector:
 
             if not correction_made:
                 if verbose:
-                    print(f"\nNo corrections made in this iteration")
+                    print("\nNo corrections made in this iteration")
                 break
 
         # Phase 2: Check low-confidence cells even if puzzle seems valid

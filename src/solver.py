@@ -1,7 +1,7 @@
 """Sudoku solver using constraint propagation and backtracking."""
 
 import numpy as np
-from typing import List, Set, Tuple, Optional
+from typing import List, Tuple, Optional
 
 
 class SudokuSolver:
@@ -163,33 +163,6 @@ class SudokuSolver:
 
         return best_cell
 
-    def _is_valid(self, row: int, col: int, num: int) -> bool:
-        """
-        Check if placing num at (row, col) is valid.
-
-        Args:
-            row: Row index
-            col: Column index
-            num: Number to place
-
-        Returns:
-            True if valid, False otherwise
-        """
-        # Check row
-        if num in self.grid[row, :]:
-            return False
-
-        # Check column
-        if num in self.grid[:, col]:
-            return False
-
-        # Check 3x3 box
-        box_row, box_col = 3 * (row // 3), 3 * (col // 3)
-        if num in self.grid[box_row:box_row + 3, box_col:box_col + 3]:
-            return False
-
-        return True
-
     def _solve_backtrack(self) -> bool:
         """
         Solve using backtracking with MRV heuristic.
@@ -212,8 +185,7 @@ class SudokuSolver:
 
         # Try each possibility
         for num in list(self.possibilities[row][col]):
-            if self._is_valid(row, col, num):
-                # Save state
+            # Save state
                 old_grid = self.grid.copy()
                 old_poss = [row_poss.copy() for row_poss in
                            [[cell.copy() for cell in row] for row in self.possibilities]]
@@ -258,31 +230,7 @@ class SudokuSolver:
         Returns:
             True if valid, False otherwise
         """
-        # Check no duplicates in rows
-        for row in range(9):
-            nums = [self.grid[row, col] for col in range(9) if self.grid[row, col] != 0]
-            if len(nums) != len(set(nums)):
-                return False
-
-        # Check no duplicates in columns
-        for col in range(9):
-            nums = [self.grid[row, col] for row in range(9) if self.grid[row, col] != 0]
-            if len(nums) != len(set(nums)):
-                return False
-
-        # Check no duplicates in boxes
-        for box_row in range(0, 9, 3):
-            for box_col in range(0, 9, 3):
-                nums = [
-                    self.grid[r, c]
-                    for r in range(box_row, box_row + 3)
-                    for c in range(box_col, box_col + 3)
-                    if self.grid[r, c] != 0
-                ]
-                if len(nums) != len(set(nums)):
-                    return False
-
-        return True
+        return not self.find_constraint_violations()
 
     def find_constraint_violations(self) -> List[Tuple[str, int, List[int], List[Tuple[int, int]]]]:
         """

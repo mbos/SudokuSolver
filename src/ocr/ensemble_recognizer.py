@@ -2,13 +2,12 @@
 
 import numpy as np
 from typing import List, Optional, Tuple
-import time
 
 from .base_recognizer import BaseRecognizer, RecognitionResult
 from .cnn_recognizer import CNNRecognizer
 from .tesseract_recognizer import TesseractRecognizer
 from .easyocr_recognizer import EasyOCRRecognizer
-from .voting_strategies import VotingStrategy, get_voting_strategy
+from .voting_strategies import get_voting_strategy
 
 
 class EnsembleRecognizer:
@@ -251,7 +250,7 @@ class EnsembleRecognizer:
         if total == 0:
             return
 
-        print(f"\n[Ensemble] Recognition Statistics:")
+        print("\n[Ensemble] Recognition Statistics:")
         print(f"  Total cells:     {total}")
         print(f"  Empty cells:     {self.stats['empty_cells']}")
         print(f"  Level 1 success: {self.stats['level1_success']} "

@@ -31,7 +31,7 @@ class EasyOCRRecognizer(BaseRecognizer):
         if enabled:
             try:
                 import easyocr
-                print(f"[EasyOCR] Initializing reader (this may take a moment)...")
+                print("[EasyOCR] Initializing reader (this may take a moment)...")
                 # Suppress PyTorch MPS pin_memory warning (not supported on Apple Silicon)
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", message=".*pin_memory.*")
@@ -128,7 +128,7 @@ class EasyOCRRecognizer(BaseRecognizer):
                             weight=self.weight
                         )
 
-        except Exception as e:
+        except Exception:
             # Silently fail and return no result
             pass
 
