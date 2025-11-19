@@ -99,7 +99,7 @@ class MajorityVoting(VotingStrategy):
 class WeightedVoting(VotingStrategy):
     """Weighted voting: models with higher weights have more influence."""
 
-    def __init__(self, min_confidence: float = 0.5):
+    def __init__(self, min_confidence: float = 0.3):
         """
         Initialize weighted voting.
 
@@ -139,27 +139,17 @@ class WeightedVoting(VotingStrategy):
                 processing_time_ms=sum(r.processing_time_ms for r in results)
             )
 
-        # Exclude 0s (uncertain)
-        non_zero_results = [r for r in valid_results if r.digit != 0]
-
-        if not non_zero_results:
-            return RecognitionResult(
-                digit=0,
-                confidence=1.0,
-                model_name="Ensemble-Weighted",
-                processing_time_ms=sum(r.processing_time_ms for r in results)
-            )
-
         # Calculate weighted scores per digit
-        # Note: weights should be set on the recognizers and passed through somehow
-        # For now, we'll use confidence as implicit weight
+        # IMPORTANT: Include digit=0 as a vote for "empty/no digit"
+        # This allows EasyOCR's high-confidence "no result" to veto false positives
         digit_scores: Dict[int, float] = {}
 
-        for result in non_zero_results:
+        for result in valid_results:
             if result.digit not in digit_scores:
                 digit_scores[result.digit] = 0.0
-            # Score = confidence (weight is baked into the model confidence)
-            digit_scores[result.digit] += result.confidence
+            # Score = confidence * weight
+            # EasyOCR (0.8 * 2.0 = 1.6) beats Tesseract false positive (0.7 * 1.0 = 0.7)
+            digit_scores[result.digit] += result.confidence * result.weight
 
         # Find digit with highest score
         winning_digit = max(digit_scores, key=digit_scores.get)

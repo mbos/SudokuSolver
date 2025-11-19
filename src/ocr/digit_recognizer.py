@@ -23,7 +23,8 @@ class DigitRecognizer:
         if not use_tesseract and model_path and os.path.exists(model_path):
             try:
                 from tensorflow import keras
-                self.model = keras.models.load_model(model_path)
+                # Load with compile=False since we only need inference, not training
+                self.model = keras.models.load_model(model_path, compile=False)
                 print(f"Loaded CNN model from {model_path}")
             except Exception as e:
                 print(f"Warning: Could not load CNN model: {e}")

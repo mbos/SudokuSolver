@@ -1,15 +1,15 @@
 {
-  "total_samples": 1134,
+  "total_samples": 1863,
   "samples_by_digit": {
-    "1": 126,
-    "2": 126,
-    "3": 126,
-    "4": 126,
-    "5": 126,
-    "6": 126,
-    "7": 126,
-    "8": 126,
-    "9": 126
+    "1": 207,
+    "2": 207,
+    "3": 207,
+    "4": 207,
+    "5": 207,
+    "6": 207,
+    "7": 207,
+    "8": 207,
+    "9": 207
   },
   "sources": [
     {
@@ -95,8 +95,62 @@
       "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-18 om 09.10.01.png",
       "samples_collected": 81,
       "date": "2025-11-18T09:10:23.794025"
+    },
+    {
+      "timestamp": "20251119_143256",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 13.53.11.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T14:32:56.181778"
+    },
+    {
+      "timestamp": "20251119_145727",
+      "source_image": "test_images_archive/synthetic_tests/test_04_medium_easy.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T14:57:27.101524"
+    },
+    {
+      "timestamp": "20251119_145835",
+      "source_image": "test_images_archive/synthetic_tests/test_04_medium_easy.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T14:58:35.735952"
+    },
+    {
+      "timestamp": "20251119_150047",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 13.53.11.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T15:00:47.923388"
+    },
+    {
+      "timestamp": "20251119_182940",
+      "source_image": "test_images_archive/synthetic_tests/test_01_high_easy.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T18:29:40.086646"
+    },
+    {
+      "timestamp": "20251119_183240",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 13.53.11.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T18:32:40.897179"
+    },
+    {
+      "timestamp": "20251119_184405",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 13.53.11.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T18:44:05.789703"
+    },
+    {
+      "timestamp": "20251119_185133",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 13.53.11.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T18:51:33.949140"
+    },
+    {
+      "timestamp": "20251119_185207",
+      "source_image": "/Users/mikebos/Downloads/Schermafbeelding 2025-11-19 om 13.53.11.png",
+      "samples_collected": 81,
+      "date": "2025-11-19T18:52:07.165825"
     }
   ],
   "created": "2025-11-17T20:00:02.708982",
-  "last_updated": "2025-11-18T09:10:23.794031"
+  "last_updated": "2025-11-19T18:52:07.165835"
 }

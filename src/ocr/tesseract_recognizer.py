@@ -57,7 +57,8 @@ class TesseractRecognizer(BaseRecognizer):
                 digit=0,
                 confidence=0.0,
                 model_name=self.name,
-                processing_time_ms=0.0
+                processing_time_ms=0.0,
+                weight=self.weight
             )
 
         # Preprocess if not provided
@@ -69,7 +70,8 @@ class TesseractRecognizer(BaseRecognizer):
                     digit=0,
                     confidence=1.0,
                     model_name=self.name,
-                    processing_time_ms=processing_time
+                    processing_time_ms=processing_time,
+                    weight=self.weight
                 )
 
         # Resize for better OCR (8x upscale)
@@ -95,21 +97,37 @@ class TesseractRecognizer(BaseRecognizer):
             config = f'--psm {psm} {base_config}'
 
             try:
-                text = self.pytesseract.image_to_string(resized, config=config)
-                text = text.strip()
+                # Use image_to_data for actual confidence scores
+                data = self.pytesseract.image_to_data(
+                    resized, config=config, output_type=self.pytesseract.Output.DICT
+                )
 
-                if text.isdigit() and len(text) == 1:
-                    digit = int(text)
-                    if 1 <= digit <= 9:
-                        # Tesseract doesn't provide confidence easily in image_to_string
-                        # Use a moderate confidence score
-                        processing_time = (time.time() - start_time) * 1000
-                        return RecognitionResult(
-                            digit=digit,
-                            confidence=0.8,  # Moderate confidence
-                            model_name=self.name,
-                            processing_time_ms=processing_time
-                        )
+                # Find best digit result with confidence
+                best_digit = None
+                best_conf = 0
+
+                for i, text in enumerate(data['text']):
+                    text = text.strip()
+                    if text.isdigit() and len(text) == 1:
+                        digit = int(text)
+                        if 1 <= digit <= 9:
+                            conf = int(data['conf'][i])
+                            if conf > best_conf:
+                                best_digit = digit
+                                best_conf = conf
+
+                if best_digit is not None and best_conf > 30:  # Minimum 30% confidence
+                    # Scale confidence from 0-100 to 0-1
+                    # Apply scaling factor since Tesseract confidence is often inflated
+                    confidence = min(0.95, best_conf / 100.0 * 0.9)
+                    processing_time = (time.time() - start_time) * 1000
+                    return RecognitionResult(
+                        digit=best_digit,
+                        confidence=confidence,
+                        model_name=self.name,
+                        processing_time_ms=processing_time,
+                        weight=self.weight
+                    )
             except Exception:
                 continue  # Try next PSM mode
 
@@ -117,7 +135,8 @@ class TesseractRecognizer(BaseRecognizer):
         processing_time = (time.time() - start_time) * 1000
         return RecognitionResult(
             digit=0,
-            confidence=0.0,
+            confidence=0.5,  # Moderate confidence for no result
             model_name=self.name,
-            processing_time_ms=processing_time
+            processing_time_ms=processing_time,
+            weight=self.weight
         )

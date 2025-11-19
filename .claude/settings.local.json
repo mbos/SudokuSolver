@@ -16,7 +16,11 @@
       "Bash(git commit:*)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(for img in test_images_archive/synthetic_tests/test_01_high_easy.png test_images_archive/synthetic_tests/test_04_medium_easy.png test_images_archive/synthetic_tests/test_07_low_easy.png)",
+      "Bash(do echo \"\")",
+      "Bash(echo:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

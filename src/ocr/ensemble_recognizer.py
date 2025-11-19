@@ -22,18 +22,20 @@ class EnsembleRecognizer:
     """
 
     def __init__(self,
-                 config: Optional[dict] = None,
-                 voting_strategy: str = "weighted"):
+                 config: Optional[dict] = None):
         """
         Initialize ensemble recognizer.
 
         Args:
             config: Configuration dictionary (default: auto-configure)
-            voting_strategy: Voting strategy to use ('majority', 'weighted', 'confidence')
         """
         self.config = config or self._default_config()
-        self.voting_strategy = get_voting_strategy(voting_strategy)
-        self.recognizers: List[BaseRecognizer] = []
+        
+        # Use the voting strategy from the config, with a default fallback
+        voting_strategy_name = self.config.get('voting_strategy', 'weighted')
+        self.voting_strategy = get_voting_strategy(voting_strategy_name)
+
+        self.recognizers_by_level: dict[int, List[BaseRecognizer]] = {}
         self.stats = {
             'total_cells': 0,
             'level1_success': 0,
@@ -48,79 +50,96 @@ class EnsembleRecognizer:
     def _default_config(self) -> dict:
         """Get default configuration."""
         return {
+            'voting_strategy': 'weighted',
             'models': {
                 'cnn': {
                     'enabled': True,
-                    'weight': 1.5,
+                    'weight': 1.0,
                     'level': 1
                 },
                 'tesseract': {
                     'enabled': True,
                     'weight': 1.0,
                     'level': 1,
-                    'psm_modes': [10, 8, 7, 13]
+                    'psm_modes': [10]
                 },
                 'easyocr': {
                     'enabled': True,
-                    'weight': 2.0,
-                    'level': 2,
+                    'weight': 2.5,
+                    'level': 2, # Slower, so run as a fallback
                     'gpu': False
                 }
             },
             'thresholds': {
-                'level1_confidence': 0.75,  # If confidence > this, accept Level 1
-                'level2_confidence': 0.65,  # If confidence > this, accept Level 2
-                'min_confidence': 0.5       # Minimum to consider valid
+                'level1_confidence': 0.85,
+                'level2_confidence': 0.70,
+                'min_confidence': 0.40
             }
         }
 
     def _initialize_recognizers(self):
-        """Initialize all configured recognizers."""
+        """Initialize all configured recognizers and group them by level."""
         models_config = self.config.get('models', {})
+        
+        # Temporarily collect all created recognizers before grouping
+        all_recognizers_with_level = []
 
         # Initialize CNN
         if models_config.get('cnn', {}).get('enabled', True):
             cnn_config = models_config['cnn']
+            level = cnn_config.get('level', 1)
             recognizer = CNNRecognizer(
                 enabled=True,
-                weight=cnn_config.get('weight', 1.5)
+                weight=cnn_config.get('weight', 1.0),
+                model_path=cnn_config.get('model_path', 'models/digit_cnn.h5')
             )
             if recognizer.is_available():
-                self.recognizers.append(recognizer)
-                print(f"[Ensemble] Added CNN recognizer (weight: {recognizer.weight})")
+                all_recognizers_with_level.append((recognizer, level))
+                print(f"[Ensemble] Loaded CNN recognizer (level: {level}, weight: {recognizer.weight})")
 
         # Initialize Tesseract
         if models_config.get('tesseract', {}).get('enabled', True):
             tess_config = models_config['tesseract']
+            level = tess_config.get('level', 1)
             recognizer = TesseractRecognizer(
                 enabled=True,
                 weight=tess_config.get('weight', 1.0),
-                psm_modes=tess_config.get('psm_modes', [10, 8, 7, 13])
+                psm_modes=tess_config.get('psm_modes', [10])
             )
             if recognizer.is_available():
-                self.recognizers.append(recognizer)
-                print(f"[Ensemble] Added Tesseract recognizer (weight: {recognizer.weight})")
+                all_recognizers_with_level.append((recognizer, level))
+                print(f"[Ensemble] Loaded Tesseract recognizer (level: {level}, weight: {recognizer.weight})")
 
         # Initialize EasyOCR
         if models_config.get('easyocr', {}).get('enabled', True):
             easy_config = models_config['easyocr']
+            level = easy_config.get('level', 2)
             recognizer = EasyOCRRecognizer(
                 enabled=True,
                 weight=easy_config.get('weight', 2.0),
-                gpu=easy_config.get('gpu', False)
+                gpu=easy_config.get('gpu', False),
+                languages=easy_config.get('languages', ['en'])
             )
             if recognizer.is_available():
-                self.recognizers.append(recognizer)
-                print(f"[Ensemble] Added EasyOCR recognizer (weight: {recognizer.weight})")
+                all_recognizers_with_level.append((recognizer, level))
+                print(f"[Ensemble] Loaded EasyOCR recognizer (level: {level}, weight: {recognizer.weight})")
 
-        if not self.recognizers:
+        if not all_recognizers_with_level:
             print("[Ensemble] WARNING: No recognizers available!")
+        
+        # Group recognizers by level
+        for recognizer, level in all_recognizers_with_level:
+            if level not in self.recognizers_by_level:
+                self.recognizers_by_level[level] = []
+            self.recognizers_by_level[level].append(recognizer)
 
-        print(f"[Ensemble] Initialized with {len(self.recognizers)} recognizer(s)")
+        total_recognizers = len(all_recognizers_with_level)
+        print(f"[Ensemble] Initialized with {total_recognizers} recognizer(s) grouped into {len(self.recognizers_by_level)} level(s).")
+
 
     def recognize_digit(self, cell: np.ndarray, verbose: bool = False) -> Tuple[int, float]:
         """
-        Recognize digit using ensemble with fallback levels.
+        Recognize digit using an efficient, multi-level ensemble with fallback.
 
         Args:
             cell: Cell image
@@ -131,77 +150,54 @@ class EnsembleRecognizer:
         """
         self.stats['total_cells'] += 1
 
-        # Preprocess once for all recognizers
-        if not self.recognizers:
+        # Get a flat list of all available recognizers to find one for preprocessing
+        all_recognizers = [rec for level_recs in self.recognizers_by_level.values() for rec in level_recs]
+        if not all_recognizers:
             return 0, 0.0
 
-        preprocessed, is_empty = self.recognizers[0].preprocess_cell(cell)
+        # Preprocess once for all recognizers
+        preprocessed, is_empty = all_recognizers[0].preprocess_cell(cell)
 
         if is_empty:
             self.stats['empty_cells'] += 1
             return 0, 1.0  # High confidence for empty cells
 
-        # Level 1: Fast path (CNN + basic Tesseract)
-        level1_results = self._run_level1(cell, preprocessed)
-        result = self.voting_strategy.vote(level1_results)
-
-        threshold = self.config['thresholds']['level1_confidence']
-        if result.digit != 0 and result.confidence >= threshold:
-            self.stats['level1_success'] += 1
+        all_results: List[RecognitionResult] = []
+        
+        # Iterate through levels (1, 2, 3...) in sorted order
+        for level in sorted(self.recognizers_by_level.keys()):
+            recognizers_at_level = self.recognizers_by_level[level]
+            
             if verbose:
-                print(f"  [L1] Digit: {result.digit}, Confidence: {result.confidence:.2f}")
-            return result.digit, result.confidence
+                print(f"  Running Level {level} recognizers...")
 
-        # Level 2: Medium path (add EasyOCR)
-        level2_results = self._run_level2(cell, preprocessed, level1_results)
-        result = self.voting_strategy.vote(level2_results)
+            for recognizer in recognizers_at_level:
+                result = recognizer.recognize(cell, preprocessed)
+                all_results.append(result)
 
-        threshold = self.config['thresholds']['level2_confidence']
-        if result.digit != 0 and result.confidence >= threshold:
-            self.stats['level2_success'] += 1
-            if verbose:
-                print(f"  [L2] Digit: {result.digit}, Confidence: {result.confidence:.2f}")
-            return result.digit, result.confidence
+            # Vote after each level is complete
+            final_result = self.voting_strategy.vote(all_results)
+            
+            # Check if confidence is high enough to stop early
+            level_threshold = self.config.get('thresholds', {}).get(f'level{level}_confidence')
+            if level_threshold and final_result.confidence >= level_threshold:
+                if verbose:
+                    print(f"  [L{level}] Success! Digit: {final_result.digit}, Confidence: {final_result.confidence:.2f} (>{level_threshold})")
+                self.stats[f'level{level}_success'] += 1
+                return final_result.digit, final_result.confidence
 
-        # Level 3: Full ensemble
-        level3_results = self._run_level3(cell, preprocessed, level2_results)
-        result = self.voting_strategy.vote(level3_results)
-
-        self.stats['level3_success'] += 1
+        # If no level produced a high-confidence result, return the best result we have
+        final_result = self.voting_strategy.vote(all_results)
         if verbose:
-            print(f"  [L3] Digit: {result.digit}, Confidence: {result.confidence:.2f}")
+            print(f"  [Fallback] Low confidence. Digit: {final_result.digit}, Confidence: {final_result.confidence:.2f}")
 
-        return result.digit, result.confidence
+        # Use a final minimum confidence threshold to avoid returning complete noise
+        min_confidence = self.config.get('thresholds', {}).get('min_confidence', 0.0)
+        if final_result.confidence < min_confidence:
+            return 0, final_result.confidence # Return 0 if confidence is too low
 
-    def _run_level1(self, cell: np.ndarray, preprocessed: np.ndarray) -> List[RecognitionResult]:
-        """Run Level 1 recognizers (fast path)."""
-        results = []
+        return final_result.digit, final_result.confidence
 
-        for recognizer in self.recognizers:
-            if recognizer.name in ['CNN', 'Tesseract']:
-                result = recognizer.recognize(cell, preprocessed)
-                results.append(result)
-
-        return results
-
-    def _run_level2(self, cell: np.ndarray, preprocessed: np.ndarray,
-                    existing_results: List[RecognitionResult]) -> List[RecognitionResult]:
-        """Run Level 2 recognizers (medium path)."""
-        results = existing_results.copy()
-
-        for recognizer in self.recognizers:
-            if recognizer.name == 'EasyOCR':
-                result = recognizer.recognize(cell, preprocessed)
-                results.append(result)
-
-        return results
-
-    def _run_level3(self, cell: np.ndarray, preprocessed: np.ndarray,
-                    existing_results: List[RecognitionResult]) -> List[RecognitionResult]:
-        """Run Level 3 - all recognizers."""
-        # For now, level 3 = level 2 (all available models)
-        # In future, could add more advanced models here
-        return existing_results
 
     def recognize_grid(self, cells: list, verbose: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -220,15 +216,18 @@ class EnsembleRecognizer:
         has_content = np.zeros((9, 9), dtype=bool)
         confidence_matrix = np.zeros((9, 9), dtype=float)
 
-        print(f"\n[Ensemble] Recognizing grid with {len(self.recognizers)} model(s)...")
+        # Get a flat list of all available recognizers to find one for preprocessing
+        all_recognizers = [rec for level_recs in self.recognizers_by_level.values() for rec in level_recs]
+        total_models = len(all_recognizers)
+        print(f"\n[Ensemble] Recognizing grid with {total_models} model(s)...")
 
         for i, cell in enumerate(cells):
             row = i // 9
             col = i % 9
 
             # Check if cell has content
-            if self.recognizers:
-                _, is_empty = self.recognizers[0].preprocess_cell(cell)
+            if all_recognizers:
+                _, is_empty = all_recognizers[0].preprocess_cell(cell)
                 has_content[row, col] = not is_empty
             else:
                 has_content[row, col] = False

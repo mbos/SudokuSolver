@@ -30,7 +30,8 @@ class CNNRecognizer(BaseRecognizer):
         if enabled and os.path.exists(model_path):
             try:
                 from tensorflow import keras
-                self.model = keras.models.load_model(model_path)
+                # Load with compile=False since we only need inference, not training
+                self.model = keras.models.load_model(model_path, compile=False)
                 print(f"[CNN] Loaded model from {model_path}")
             except Exception as e:
                 print(f"[CNN] Warning: Could not load model: {e}")
@@ -97,7 +98,8 @@ class CNNRecognizer(BaseRecognizer):
                 digit=0,
                 confidence=0.0,
                 model_name=self.name,
-                processing_time_ms=0.0
+                processing_time_ms=0.0,
+                weight=self.weight
             )
 
         # Preprocess if not provided
@@ -109,7 +111,8 @@ class CNNRecognizer(BaseRecognizer):
                     digit=0,
                     confidence=1.0,
                     model_name=self.name,
-                    processing_time_ms=processing_time
+                    processing_time_ms=processing_time,
+                    weight=self.weight
                 )
 
         # Resize to 28x28 MNIST format
@@ -123,29 +126,26 @@ class CNNRecognizer(BaseRecognizer):
 
         # Predict
         predictions = self.model.predict(input_data, verbose=0)
-        digit = np.argmax(predictions[0])
-        confidence = float(predictions[0][digit])
+        predicted_class = np.argmax(predictions[0])
+        confidence = float(predictions[0][predicted_class])
 
-        # Adaptive confidence thresholds per digit
-        confidence_thresholds = {
-            1: 0.70,  # Can be confused with 7
-            6: 0.65,  # Can be confused with 0, 5, 8
-            8: 0.65,  # Can be confused with 3, 6
-            9: 0.65,  # Can be confused with 4, 7
-            0: 0.85,  # Higher threshold for "empty"
-        }
-        threshold = confidence_thresholds.get(digit, 0.75)
+        # Convert class index to digit
+        # If model has 9 outputs: class 0-8 maps to digit 1-9
+        # If model has 10 outputs: class 0-9 maps to digit 0-9
+        num_classes = predictions[0].shape[0]
+        if num_classes == 9:
+            digit = predicted_class + 1  # Class 0 = digit 1, etc.
+        else:
+            digit = predicted_class  # Class index equals digit
 
-        # Only return if confident enough
-        if confidence < threshold:
-            digit = 0
-            confidence = 0.0
-
+        # Return actual prediction with confidence - let ensemble voting decide
+        # No internal thresholding, so CNN's vote counts in weighted voting
         processing_time = (time.time() - start_time) * 1000
 
         return RecognitionResult(
-            digit=int(digit) if digit != 0 else 0,
+            digit=int(digit),
             confidence=confidence,
             model_name=self.name,
-            processing_time_ms=processing_time
+            processing_time_ms=processing_time,
+            weight=self.weight
         )

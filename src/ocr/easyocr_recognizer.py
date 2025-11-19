@@ -1,6 +1,7 @@
 """EasyOCR-based digit recognizer."""
 
 import time
+import warnings
 import numpy as np
 from typing import Optional
 
@@ -31,11 +32,14 @@ class EasyOCRRecognizer(BaseRecognizer):
             try:
                 import easyocr
                 print(f"[EasyOCR] Initializing reader (this may take a moment)...")
-                self.reader = easyocr.Reader(
-                    self.languages,
-                    gpu=self.gpu,
-                    verbose=False
-                )
+                # Suppress PyTorch MPS pin_memory warning (not supported on Apple Silicon)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", message=".*pin_memory.*")
+                    self.reader = easyocr.Reader(
+                        self.languages,
+                        gpu=self.gpu,
+                        verbose=False
+                    )
                 print(f"[EasyOCR] Initialized successfully (GPU: {self.gpu})")
             except ImportError:
                 print("[EasyOCR] Warning: easyocr not installed")
@@ -66,7 +70,8 @@ class EasyOCRRecognizer(BaseRecognizer):
                 digit=0,
                 confidence=0.0,
                 model_name=self.name,
-                processing_time_ms=0.0
+                processing_time_ms=0.0,
+                weight=self.weight
             )
 
         # Preprocess if not provided
@@ -78,7 +83,8 @@ class EasyOCRRecognizer(BaseRecognizer):
                     digit=0,
                     confidence=1.0,
                     model_name=self.name,
-                    processing_time_ms=processing_time
+                    processing_time_ms=processing_time,
+                    weight=self.weight
                 )
 
         try:
@@ -92,12 +98,15 @@ class EasyOCRRecognizer(BaseRecognizer):
                 gray = cell_image
 
             # Run EasyOCR with allowlist for digits only
-            results = self.reader.readtext(
-                gray,
-                allowlist='123456789',
-                detail=1,  # Return bounding boxes and confidence
-                paragraph=False
-            )
+            # Suppress PyTorch MPS pin_memory warning during inference
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", message=".*pin_memory.*")
+                results = self.reader.readtext(
+                    gray,
+                    allowlist='123456789',
+                    detail=1,  # Return bounding boxes and confidence
+                    paragraph=False
+                )
 
             # Process results
             if results:
@@ -115,18 +124,23 @@ class EasyOCRRecognizer(BaseRecognizer):
                             digit=digit,
                             confidence=confidence,
                             model_name=self.name,
-                            processing_time_ms=processing_time
+                            processing_time_ms=processing_time,
+                            weight=self.weight
                         )
 
         except Exception as e:
             # Silently fail and return no result
             pass
 
-        # No digit recognized
+        # No digit recognized - moderate confidence vote for "empty"
+        # This acts as a veto only when other models are also uncertain
+        # Score: 0.6 * 2.0 = 1.2, beats Tesseract alone (0.7 * 1.0 = 0.7)
+        # but CNN + Tesseract agreeing (1.35 + 0.7 = 2.05) can override it
         processing_time = (time.time() - start_time) * 1000
         return RecognitionResult(
             digit=0,
-            confidence=0.0,
+            confidence=0.6,  # Moderate confidence - veto only uncertain cases
             model_name=self.name,
-            processing_time_ms=processing_time
+            processing_time_ms=processing_time,
+            weight=self.weight
         )

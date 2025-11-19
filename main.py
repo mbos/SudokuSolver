@@ -10,6 +10,7 @@ an image with the solution filled in.
 import argparse
 import sys
 import os
+import yaml
 import numpy as np
 
 from src.grid_detector import GridDetector
@@ -69,7 +70,19 @@ def solve_sudoku_from_image(
     print("\n[2/4] Recognizing digits using OCR...")
     if use_ensemble:
         print("Using ensemble of multiple OCR models...")
-        ensemble = EnsembleRecognizer(voting_strategy="weighted")
+        # Load ensemble configuration from YAML file
+        try:
+            with open("config/ocr_config.yaml", 'r') as f:
+                config = yaml.safe_load(f)
+            print("✓ Loaded OCR configuration from config/ocr_config.yaml")
+        except FileNotFoundError:
+            print("⚠️ Warning: config/ocr_config.yaml not found. Using default OCR configuration.")
+            config = None
+        except Exception as e:
+            print(f"⚠️ Warning: Error loading config/ocr_config.yaml: {e}. Using default OCR configuration.")
+            config = None
+
+        ensemble = EnsembleRecognizer(config=config)
         detected_grid, has_content, confidence_matrix = ensemble.recognize_grid(cells, verbose=verbose)
     else:
         recognizer = DigitRecognizer(model_path=model_path, use_tesseract=use_tesseract)
